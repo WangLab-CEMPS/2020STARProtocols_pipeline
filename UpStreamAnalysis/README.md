@@ -66,8 +66,7 @@ This is the UpStreamAnalysis script of 2020STARProtocols_pipeline. It will be di
 
 - [DownloadFile](#DownloadFile)
 - [Preprocessing_and_QC](#Preprocessing_and_QC)
-- [Align_and_Convert](#Align_and_Convert)
-- [Filter](#Filter)
+- [Align_and_Convert_and_Filter](#Align_and_Convert_and_Filter)
 - [CallPeak](#CallPeak)
 - [Normalize_and_QC](#Normalize_and_QC)
 
@@ -188,7 +187,7 @@ total 16G
 
 ## Preprocessing_and_QC
 
-**Program**
+### Program
 
 - fastp  v0.20.0
 - FastQC 0.11.7
@@ -384,15 +383,152 @@ multiqc -o FastQCresult multiqcresult
 
 
 
-## Align_and_Convert
+## Align_and_Convert_and_Filter
+
+### Program
+
+- Bowtie2 v2.3.4.3 
+- Samtools v1.9
+- sambamba v0.6.7
+- bedtools v2.25.0 
+- multiqc 1.8
+
+### Description
+
+In this part, we will align the trimmed reads to the TAIR10 genome using `Bowtie2`. Then the mapped reads will be converted into BAM format, sorted, indexed using `Samtools`. We then use the `sambamba` , `Samtools` , `bedtools` to mark, remove low-quailty, duplicated, organellar mapped reads.
+
+```bash
+sgd@localhost ~/project/202010/Script
+$ nohup ./ATAC_Seq_02_align.sh ~/project/202010/2020STARProtocols_ATAC_Seq_202010 >> ~/project/202010/2020STARProtocols_ATAC_Seq_202010/log_file 2>&1
+```
+
+Then you will see the logs and alignmentd file in separate directories
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010
+$ tree -L 1 logs
+logs
+├── bowtie2_alignment
+├── fastp
+├── fastqc_v1
+└── sambamba_markdup
+
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010
+$ tree -L 1 result/
+result/
+├── 01_cleandata
+├── 02_alignment # Raw mapped reads
+└── 03_filter_alignment # filtered mapped reads
+```
+
+We can see the bowtie2 logs in multiqc structure in the `2020STARProtocols_ATAC_Seq_202010/logs/bowtie2_alignment/multiqc_report.html`
+
+![Bowtie2Log](../Picture/Alignment_Bowtie2Log.jpg)
+
+And we can use the samtools to see the difference between raw bam and filter bam
+
+```bash
+# Before filter
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/02_alignment
+$ samtools flagstat -@ 10 WT-E5-0h-R1.sorted.bam
+62903320 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+0 + 0 supplementary
+0 + 0 duplicates
+62491628 + 0 mapped (99.35% : N/A)
+62903320 + 0 paired in sequencing
+31451660 + 0 read1
+31451660 + 0 read2
+59420334 + 0 properly paired (94.46% : N/A)
+62414068 + 0 with itself and mate mapped
+77560 + 0 singletons (0.12% : N/A)
+178208 + 0 with mate mapped to a different chr
+45806 + 0 with mate mapped to a different chr (mapQ>=5)
+
+
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/02_alignment
+$ samtools idxstats WT-E5-0h-R1.sorted.bam
+Chr1	30427671	7632907	12314
+Chr2	19698289	9812027	12513
+Chr3	23459830	6547802	11304
+Chr4	18585056	4803005	7891
+Chr5	26975502	6735431	10922
+ChrM	366924	7827281	7311
+ChrC	154478	19133175	15305
+*	0	0	334132
+
+
+--------------------------------------------------------------------------------------
+# After filter
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/03_filter_alignment
+$ samtools flagstat -@ 10 WT-E5-0h-R1.rm_organelle.bam
+22137097 + 0 in total (QC-passed reads + QC-failed reads)
+0 + 0 secondary
+0 + 0 supplementary
+0 + 0 duplicates
+22137097 + 0 mapped (100.00% : N/A)
+22137097 + 0 paired in sequencing
+11074252 + 0 read1
+11062845 + 0 read2
+20423402 + 0 properly paired (92.26% : N/A)
+22137097 + 0 with itself and mate mapped
+0 + 0 singletons (0.00% : N/A)
+9246 + 0 with mate mapped to a different chr
+9246 + 0 with mate mapped to a different chr (mapQ>=5)
+
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/03_filter_alignment
+$ samtools idxstats WT-E5-0h-R1.rm_organelle.bam
+Chr1	30427671	5712098	0
+Chr2	19698289	3764959	0
+Chr3	23459830	4299979	0
+Chr4	18585056	3420802	0
+Chr5	26975502	4939259	0
+ChrM	366924	0	0
+ChrC	154478	0	0
+*	0	0	0
+
+```
 
 
 
+### PseudoCode
+
+- Input
+  - **cleandata:** \${prefix}\_1.clean.fq.gz, ${prefix}_2.clean.fq.gz
+  - **The bed file of region which needs to be removed:** filter.bed
+  - **TIAR 10 index:** ${index}
+- Output:
+  - **Raw BAM file:** ${prefix}.sorted.bam
+  - **Filtered BAM file**: ${prefix}.rm_organelle.bam
+  - **multiqcresult**
+
+```bash
+# bowtie2 alignment & samtools sort & samtools convert into bam 
+bowtie2 -x ${index} \
+-1 ${prefix}_1.clean.fq.gz \
+-2 ${prefix}_2.clean.fq.gz 2> ${prefix}.log \
+| samtools sort -@ 20 -O bam -o ${prefix}.sorted.bam -
+# samtools index bam 
+samtools index ${prefix}.sorted.bam
+
+# sambamba mark the duplicated reads
+sambamba markdup ${prefix}.sorted.bam ${prefix}.sorted.markdup.bam 2> ${prefix}.log
+
+# remove low-quality mapped and duplicated reads
+samtools view -@ 20 -bF 1804 -q 20 ${prefix}.sorted.markdup.bam -o ${prefix}.flt.bam
+samtools index -@ 20 ${prefix}.flt.bam
+
+# bedtools remove ChrC and ChrM reads
+bedtools intersect -abam ${prefix}.flt.bam -b filter.bed -v > ${prefix}.rm_organelle.bam
+samtools index ${prefix}.rm_organelle.bam
+
+```
 
 
-## Filter
 
+### Note
 
+- 
 
 
 
