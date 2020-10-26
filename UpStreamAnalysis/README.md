@@ -498,8 +498,8 @@ ChrC	154478	0	0
   - **The bed file of region which needs to be removed:** filter.bed
   - **TIAR 10 index:** ${index}
 - Output:
-  - **Raw BAM file:** ${prefix}.sorted.bam
-  - **Filtered BAM file**: ${prefix}.rm_organelle.bam
+  - **Raw BAM File:** ${prefix}.sorted.bam
+  - **Filtered BAM File**: ${prefix}.rm_organelle.bam
   - **multiqcresult**
 
 ```bash
@@ -528,15 +528,214 @@ samtools index ${prefix}.rm_organelle.bam
 
 ### Note
 
-- 
-
 
 
 ## CallPeak
 
+### Program
 
+- MACS2  v2.1.2
+
+### Description
+
+In this part, we will use the `MACS2` to call the peak of ATAC-Seq
+
+```bash
+sgd@localhost ~/project/202010/Script
+$ nohup ./ATAC_Seq_03_callpeak.sh ~/project/202010/2020STARProtocols_ATAC_Seq_202010 >> ~/project/202010/2020STARProtocols_ATAC_Seq_202010/log_file 2>&1 &
+
+```
+
+We can see the log and peak file in separate directory.
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/logs
+$ tree macs2/
+macs2/
+├── div_peak
+│   ├── WT-E5-0h-R1.log
+│   ├── WT-E5-0h-R2.log
+│   ├── WT-G3-R1.log
+│   └── WT-G3-R2.log
+└── merge_peak
+
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result
+$ tree 04_callpeak/
+04_callpeak/
+├── div_peak
+│   ├── WT-E5-0h-R1_peaks.narrowPeak
+│   ├── WT-E5-0h-R1_peaks.xls
+│   ├── WT-E5-0h-R1_summits.bed
+│   ├── WT-E5-0h-R2_peaks.narrowPeak
+│   ├── WT-E5-0h-R2_peaks.xls
+│   ├── WT-E5-0h-R2_summits.bed
+│   ├── WT-G3-R1_peaks.narrowPeak
+│   ├── WT-G3-R1_peaks.xls
+│   ├── WT-G3-R1_summits.bed
+│   ├── WT-G3-R2_peaks.narrowPeak
+│   ├── WT-G3-R2_peaks.xls
+│   └── WT-G3-R2_summits.bed
+└── merge_peak
+
+```
+
+We can count the peak number using `wc -l`
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/04_callpeak/div_peak
+$ wc -l *.narrowPeak
+  21892 WT-E5-0h-R1_peaks.narrowPeak
+  21592 WT-E5-0h-R2_peaks.narrowPeak
+  18700 WT-G3-R1_peaks.narrowPeak
+  20361 WT-G3-R2_peaks.narrowPeak
+  82545 total
+
+```
+
+
+
+### PseudoCode
+
+- Input
+  - **Filtered BAM File**: ${prefix}.rm_organelle.bam
+- Output
+  - **Peak Files:** ${prefix}
+
+```bash
+macs2 callpeak -t ${prefix}.rm_organelle.bam -f BAMPE \
+-n ${prefix} \
+-g 1.1e8 \
+--outdir ${prefix}
+```
+
+
+
+### Note
+
+- For different version MACS2, the final peak number will be different although it will not influence a lot
 
 
 
 ## Normalize_and_QC
 
+### Program
+
+- deepTools v3.1.2
+
+### Description
+
+In this part, we will use the `deeptools` to convert the bam file into bigwig file
+
+```bash
+sgd@localhost ~/project/202010/Script
+$ nohup ./ATAC_Seq_04_bamtobw.sh ~/project/202010/2020STARProtocols_ATAC_Seq_202010 >> ~/project/202010/2020STARProtocols_ATAC_Seq_202010/log_file 2>&1 &
+```
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/05_bamtobw
+$ ll
+total 162M
+-rw-r--r--. 1 sgd bioinfo 41M Oct 26 14:42 WT-E5-0h-R1.rm_organelle.bw
+-rw-r--r--. 1 sgd bioinfo 41M Oct 26 14:43 WT-E5-0h-R2.rm_organelle.bw
+-rw-r--r--. 1 sgd bioinfo 40M Oct 26 14:44 WT-G3-R1.rm_organelle.bw
+-rw-r--r--. 1 sgd bioinfo 43M Oct 26 14:44 WT-G3-R2.rm_organelle.bw
+
+```
+
+and plot the meta-plot, correlation-plot.
+
+```bash
+sgd@localhost ~/project/202010/Script
+$ nohup ./ATAC_Seq_05_deeptools_plot.sh ~/project/202010/2020STARProtocols_ATAC_Seq_202010 >> ~/project/202010/2020STARProtocols_ATAC_Seq_202010/log_file 2>&1 &
+```
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/06_plot
+$ ll
+total 2.6M
+-rw-r--r--. 1 sgd bioinfo 376K Oct 26 14:58 correlation_spearman_bwscore_heatmapplot.pdf
+-rw-r--r--. 1 sgd bioinfo 730K Oct 26 14:58 correlation_spearman_bwscore_scatterplot.pdf
+-rw-r--r--. 1 sgd bioinfo 381K Oct 26 14:58 reference_point_region.pdf
+-rw-r--r--. 1 sgd bioinfo 382K Oct 26 14:58 reference_point_region_persample.pdf
+-rw-r--r--. 1 sgd bioinfo 383K Oct 26 14:57 scale_region.pdf
+-rw-r--r--. 1 sgd bioinfo 384K Oct 26 14:58 scale_region_persample.pdf
+
+```
+
+![Correlation_ScatterPlot](../Picture/Normalize_and_QC_deeptools_correlation_scatterplot.jpg)
+
+![Correlation_Heatmap](../Picture/Normalize_and_QC_deeptools_correlation_Heatmap.jpg)
+
+![Profile_ScaleRegion](../Picture/Normalize_and_QC_deeptools_Profile_ScaleRegion.jpg)
+
+![Profile_ReferencePoint](../Picture/Normalize_and_QC_deeptools_Profile_ReferencePoint.jpg)
+
+
+
+### PseudoCode
+
+- Input
+  - **Filtered BAM File**: ${prefix}.rm_organelle.bam
+- Output
+  - **bigwig File:** ${prefix}.bw
+  - **meta-plot:** reference_point_region.pdf / scale_region.pdf
+  - **correlation-plot:** correlation_spearman_bwscore_heatmapplot.pdf / correlation_spearman_bwscore_scatterplot.pdf
+
+```bash
+# convert bam into bigwig
+bamCoverage -b ${prefix}.rm_organelle.bam \
+--binSize 10 \
+-o ${prefix}.bw --normalizeUsing BPM
+
+computeMatrix scale-regions \
+-S *.bw \
+-R Araport11_whole_gene_for_deeptools.bed \
+--regionBodyLength 2000 \
+--beforeRegionStartLength 3000 --afterRegionStartLength 3000 \
+--skipZeros 
+-o matrix_scale_region.scale.gz
+
+computeMatrix reference-point \
+-S *.bw \
+-R Araport11_whole_gene_for_deeptools.bed \
+--referencePoint TSS \
+-b 3000 -a 3000 \
+--skipZeros 
+-o matrix_reference_point.reference.gz
+
+plotProfile -m matrix_scale_region.scale.gz -out scale_region.pdf --perGroup
+plotProfile -m matrix_scale_region.scale.gz -out scale_region_persample.pdf --numPlotsPerRow 4
+plotProfile -m matrix_reference_point.reference.gz -out reference_point_region.pdf --perGroup
+plotProfile -m matrix_reference_point.reference.gz -out reference_point_region_persample.pdf --numPlotsPerRow 4
+
+
+multiBigwigSummary bins -b *.bw -o multibw_results.npz
+plotCorrelation -in multibw_results.npz \
+--corMethod spearman --skipZeros \
+--whatToPlot scatterplot \
+--plotTitle "Spearman Correlation" \
+--removeOutliers \
+--plotFile correlation_spearman_bwscore_scatterplot.pdf
+
+plotCorrelation -in multibw_results.npz \
+--corMethod spearman --skipZeros \
+--whatToPlot heatmap \
+--plotTitle "Spearman Correlation" \
+--removeOutliers \
+--plotNumbers \
+--plotFile correlation_spearman_bwscore_heatmapplot.pdf
+```
+
+
+
+### Note
+
+- You can choose different binSize and normalized ways
+
+- During the `deeptools computeMatrix`,  you will need a file named `Araport11_whole_gene_for_deeptools.bed`. For this file, you can make it by yourself using following command or just use [my file](../File/Araport11_whole_gene_for_deeptools.bed)
+
+  ```bash
+  awk '$3=="gene"' Araport11_GFF3_genes_transposons.201606.gff | awk 'BEGIN {OFS="\t"} {print $1,$4,$5,$6,$7,$9}' | sed 's/;.*//g' | sed 's/ID=//' > Araport11_whole_gene_for_deeptools.bed
+  ```
+
+  
