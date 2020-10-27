@@ -84,7 +84,7 @@ Although this script is the code of 2020STARProtocols, but actually the material
 
 Aftering cliking the `Download button`, you will see the whole data in the PRJCA002620 project, but we only used the WT-G3 and WT-E5-0h data in this analysis. The whole alias between Run-accession(which is the file name) and Run alias(which is the true name) can be found in the CRA002609.xlsx
 
-![Download_in_BIG](../Picture/Download_1.jpg)
+![Download_in_BIG](Picture/Download_1.jpg)
 
 At first, we can prepare a directory named `2020STARProtocols_ATAC_Seq_202010`, and then create a directory named `rawdata` inside it.
 
@@ -104,7 +104,7 @@ $ tree 2020STARProtocols_ATAC_Seq_202010/
 
 And then we prepare a downinfo file to download the fastq file we needed.
 
-> For DownloadInfo, you can also use the [DownloadInfo.txt](../File/DownloadInfo.txt) I prepare.
+> For DownloadInfo, you can also use the [DownloadInfo.txt](File/DownloadInfo.txt) I prepare.
 
 ```bash
 # you can make this file by yourself
@@ -126,7 +126,7 @@ $ cut -f 1 DownloadInfo.txt | xargs -I {} echo ftp://download.big.ac.cn/gsa3/CRA
 
 After downloading the R1 and R2, we then can check the md5 value and rename files.
 
-> For md5sum, you can also use the [md5sum.txt](../File/md5sum.txt) I download.
+> For md5sum, you can also use the [md5sum.txt](File/md5sum.txt) I download.
 
 ```bash
 # download md5sum file
@@ -341,9 +341,9 @@ $ tree
 
 We can also see the mutliqc result in `2020STARProtocols_ATAC_Seq_202010/logs/fastqc_v1/multiqc_report.html`
 
-![multiQC](../Picture/Preprocessing_and_QC_multiQC.jpg)
+![multiQC](Picture/Preprocessing_and_QC_multiQC.jpg)
 
-![multiQC_1](../Picture/Preprocessing_and_QC_multiQC_1.jpg)
+![multiQC_1](Picture/Preprocessing_and_QC_multiQC_1.jpg)
 
 
 
@@ -423,7 +423,7 @@ result/
 
 We can see the bowtie2 logs in multiqc structure in the `2020STARProtocols_ATAC_Seq_202010/logs/bowtie2_alignment/multiqc_report.html`
 
-![Bowtie2Log](../Picture/Alignment_Bowtie2Log.jpg)
+![Bowtie2Log](Picture/Alignment_Bowtie2Log.jpg)
 
 And we can use the samtools to see the difference between raw bam and filter bam
 
@@ -662,13 +662,21 @@ total 2.6M
 
 ```
 
-![Correlation_ScatterPlot](../Picture/Normalize_and_QC_deeptools_correlation_scatterplot.jpg)
 
-![Correlation_Heatmap](../Picture/Normalize_and_QC_deeptools_correlation_Heatmap.jpg)
 
-![Profile_ScaleRegion](../Picture/Normalize_and_QC_deeptools_Profile_ScaleRegion.jpg)
+![Correlation_ScatterPlot](Picture/Normalize_and_QC_deeptools_correlation_scatterplot.jpg)
 
-![Profile_ReferencePoint](../Picture/Normalize_and_QC_deeptools_Profile_ReferencePoint.jpg)
+
+
+![Correlation_Heatmap](Picture/Normalize_and_QC_deeptools_correlation_Heatmap.jpg)
+
+
+
+![Profile_ScaleRegion](Picture/Normalize_and_QC_deeptools_Profile_ScaleRegion.jpg)
+
+
+
+![Profile_ReferencePoint](Picture/Normalize_and_QC_deeptools_Profile_ReferencePoint.jpg)
 
 
 
@@ -732,7 +740,7 @@ plotCorrelation -in multibw_results.npz \
 
 - You can choose different binSize and normalized ways
 
-- During the `deeptools computeMatrix`,  you will need a file named `Araport11_whole_gene_for_deeptools.bed`. For this file, you can make it by yourself using following command or just use [my file](../File/Araport11_whole_gene_for_deeptools.bed)
+- During the `deeptools computeMatrix`,  you will need a file named `Araport11_whole_gene_for_deeptools.bed`. For this file, you can make it by yourself using following command or just use [my file](File/Araport11_whole_gene_for_deeptools.bed)
 
   ```bash
   awk '$3=="gene"' Araport11_GFF3_genes_transposons.201606.gff | awk 'BEGIN {OFS="\t"} {print $1,$4,$5,$6,$7,$9}' | sed 's/;.*//g' | sed 's/ID=//' > Araport11_whole_gene_for_deeptools.bed
