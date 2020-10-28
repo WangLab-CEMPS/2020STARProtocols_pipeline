@@ -369,8 +369,12 @@ GRanges object with 25668 ranges and 15 metadata columns:
 Then we can output our DA result
 
 ```r
-readr::write_csv(as_tibble(peakAnno@anno),
-                 path = paste0("result/",experiment_name,"_DiffPeakAnno.csv"))
+peakAnno_tb <- as_tibble(peakAnno@anno)
+peakAnno_tb %>% 
+  mutate(seqnames = paste0("Chr", seqnames), # convert 1 into Chr1
+         geneChr = paste0("Chr", geneChr)) %>% 
+  readr::write_csv(.,path = paste0("result/",experiment_name,"_DiffPeakAnno.csv"))
+
 ```
 
 
@@ -380,6 +384,8 @@ readr::write_csv(as_tibble(peakAnno@anno),
 - you can see the DA analysis script in [DA_DiffBind.R](Script/DA_DiffBind.R)
 
 - you can see the final DiffPeakAnno in [DiffPeakAnno](File/E50h_GM3D_DiffPeakAnno.csv)
+
+- DiffBind in Windows R may not work very well beacasue of Rsamtools
 
 - My session
 
@@ -497,9 +503,13 @@ ego <- compareCluster(geneClusters = DiffPeakGene,
                       ont = "BP")
 ```
 
-We can plot the GO-plot
+We can save and plot the GO-plot
 
 ```r
+readr::write_csv(as_tibble(ego@compareClusterResult),
+                 path = paste0("result/",experiment_name,"_DiffPeakGO.csv"))
+
+
 pdf(paste0("plot/",experiment_name,"_GODotplot.pdf"))
 dotplot(ego)
 dev.off()
@@ -511,5 +521,292 @@ dev.off()
 
 - you can see the EnrichmentAnalysis script in [Enrichment_clusterProfiler](Script/Enrichment_clusterProfiler.R)
 
+- you can see the final DiffPeakAnno in [DiffPeakGO](File/E50h_GM3D_DiffPeakGO.csv)
+
 - PeakAnno is a complex thing
+
+- Myseesion
+
+  ```r
+  > sessionInfo()
+  R version 3.6.1 (2019-07-05)
+  Platform: x86_64-pc-linux-gnu (64-bit)
+  Running under: CentOS Linux 7 (Core)
+  
+  Matrix products: default
+  BLAS:   /opt/sysoft/R-3.6.1/lib64/R/lib/libRblas.so
+  LAPACK: /opt/sysoft/R-3.6.1/lib64/R/lib/libRlapack.so
+  
+  locale:
+   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+   [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+   [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+   [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+   [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+  [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+  
+  attached base packages:
+  [1] parallel  stats4    stats     graphics  grDevices utils     datasets 
+  [8] methods   base     
+  
+  other attached packages:
+  [1] org.At.tair.db_3.10.0  AnnotationDbi_1.48.0   IRanges_2.20.0        
+  [4] S4Vectors_0.24.0       Biobase_2.46.0         BiocGenerics_0.32.0   
+  [7] clusterProfiler_3.14.0 dplyr_1.0.0   
+  ```
+
+  
+
+## Visualization
+
+Sometimes, we want to show GO selected instead of the default "top-GO", and we may also want to plot the volcano-plot like RNA-Seq. So this part will show how to plot specific GO dotplot and volcano plot.
+
+### R code
+
+**Dotplot**
+
+```r
+# Info ---------------------------
+## Script name: DotplotSelect.R
+
+## experiment_name:
+experiment_name <- "E50h_GM3D"
+
+# Prepare -----------------------------------------------------------------
+
+# load up the packages
+library(tidyverse)
+
+# load up the data
+GOResult <- read_csv("result/E50h_GM3D_DiffPeakGO.csv")
+
+```
+
+If you want to select specific GO, you can just use the excel or filter in R. Here I use the dplyr silce to select GO.
+
+```r
+# filter and plot ---------------------------------------------------------
+
+# Here I just randomly select GO
+set.seed(19960203)
+GOResult %>% 
+  slice(sample(nrow(GOResult), 10)) %>% 
+  group_by(Cluster) %>% 
+  select(c(1,3,4,7)) %>% 
+  mutate(Description = factor(Description, levels = Description),
+         GeneRatio = eval(parse(text = GeneRatio))) %>% 
+  ggplot(aes(x = Cluster, y = Description)) +
+  theme_bw() +
+  geom_point(aes(size = GeneRatio, color = p.adjust)) +
+  scale_color_continuous(low="red", high="blue", 
+                         guide=guide_colorbar(reverse=TRUE)) +
+  scale_size(range=c(3, 8)) +
+  ylab(NULL)
+```
+
+![DotplotSelect](Picture/GO_dotplot_Select.jpg)
+
+
+
+
+
+**VolcanoPlot**
+
+```r
+# Info ---------------------------
+## Script name: Volcanoplot.R
+
+## experiment_name:
+experiment_name <- "E50h_GM3D"
+# Prepare -----------------------------------------------------------------
+
+# load up the packages
+library(tidyverse)
+
+# load up the data
+DiffPeakResult <- read_csv("result/E50h_GM3D_DiffPeakAnno.csv") %>% 
+  select(Fold, FDR, feature_id, geneId) 
+
+# prepare Point Size & Color ------------------------------------------------------
+
+DiffPeakResult %>% 
+  mutate(Color = case_when(
+    abs(Fold) <= 1 | FDR >= 0.05 ~ "No_Sig",
+    Fold > 1 & FDR < 0.05 ~ "Up",
+    Fold < -1 & FDR < 0.05 ~ "down"
+  )) %>% 
+  mutate(PointSize = case_when(
+    abs(Fold) <=  2 | FDR >= 0.05 ~ "A",
+    abs(Fold) >= 4 &  FDR < 0.05 ~ "C",
+    abs(Fold) > 2 & FDR < 0.05 ~ "B"
+  )) -> DiffPeakResult
+  
+
+
+# plot Volcano ------------------------------------------------------------
+
+ggplot(DiffPeakResult, aes(x = Fold, y = -log10(FDR))) +
+  geom_point(aes(color = Color, 
+                 size = PointSize),alpha = 0.6) +
+  scale_size_manual(values=c("A" = 1,
+                             "B" = 3,
+                             "C" = 5),
+                    guide = F) +
+  scale_color_manual(values = c("No_Sig" = "#a6a6a6",
+                                "Up" = "#d73c31",
+                                "down" = "#669cc7")) +
+  geom_vline(xintercept = c(-1, 1), 
+             color="grey40",
+             linetype="longdash", lwd = 0.5) +
+  geom_hline(yintercept = -log10(0.05),color="grey40",
+             linetype="longdash", lwd = 0.5) +
+  theme_bw() -> p
+
+pdf(paste0("plot/",experiment_name,"_Volcano.pdf"))
+p
+dev.off()
+```
+
+
+
+![Volcanoplot](Picture/Volcanoplot.jpg)
+
+
+
+### Note
+
+- you can see the script in the [DotplotSelect](Script/DotplotSelect.R) and [Volcanoplot](Script/Volcanoplot.R)
+
+- My session
+
+  ```r
+  > sessionInfo()
+  R version 3.6.1 (2019-07-05)
+  Platform: x86_64-pc-linux-gnu (64-bit)
+  Running under: CentOS Linux 7 (Core)
+  
+  Matrix products: default
+  BLAS:   /opt/sysoft/R-3.6.1/lib64/R/lib/libRblas.so
+  LAPACK: /opt/sysoft/R-3.6.1/lib64/R/lib/libRlapack.so
+  
+  locale:
+   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+   [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+   [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+   [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+   [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+  [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+  
+  attached base packages:
+  [1] stats     graphics  grDevices utils     datasets  methods   base     
+  
+  other attached packages:
+  [1] forcats_0.4.0   stringr_1.4.0   dplyr_1.0.0     purrr_0.3.3    
+  [5] readr_1.3.1     tidyr_1.0.0     tibble_2.1.3    ggplot2_3.3.2  
+  [9] tidyverse_1.3.0
+  ```
+
+
+
+you can see the whole R project structure
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/07_Diff
+$ tree
+.
+├── 07_Diff.Rproj
+├── plot
+│   ├── E50h_GM3D_GODotplot.pdf
+│   ├── E50h_GM3D_GODotplot_Select.pdf
+│   ├── E50h_GM3D_MAplot.pdf
+│   ├── E50h_GM3D_Sample_Cor.pdf
+│   └── E50h_GM3D_Volcano.pdf
+├── rawdata
+│   ├── bam
+│   │   ├── WT-E5-0h-R1.rm_organelle.bam -> ../../../03_filter_alignment/WT-E5-0h-R1.rm_organelle.bam
+│   │   ├── WT-E5-0h-R1.rm_organelle.bam.bai -> ../../../03_filter_alignment/WT-E5-0h-R1.rm_organelle.bam.bai
+│   │   ├── WT-E5-0h-R2.rm_organelle.bam -> ../../../03_filter_alignment/WT-E5-0h-R2.rm_organelle.bam
+│   │   ├── WT-E5-0h-R2.rm_organelle.bam.bai -> ../../../03_filter_alignment/WT-E5-0h-R2.rm_organelle.bam.bai
+│   │   ├── WT-G3-R1.rm_organelle.bam -> ../../../03_filter_alignment/WT-G3-R1.rm_organelle.bam
+│   │   ├── WT-G3-R1.rm_organelle.bam.bai -> ../../../03_filter_alignment/WT-G3-R1.rm_organelle.bam.bai
+│   │   ├── WT-G3-R2.rm_organelle.bam -> ../../../03_filter_alignment/WT-G3-R2.rm_organelle.bam
+│   │   └── WT-G3-R2.rm_organelle.bam.bai -> ../../../03_filter_alignment/WT-G3-R2.rm_organelle.bam.bai
+│   └── peak
+│       ├── WT-E5-0h-R1_peaks.narrowPeak -> ../../../04_callpeak/div_peak/WT-E5-0h-R1_peaks.narrowPeak
+│       ├── WT-E5-0h-R2_peaks.narrowPeak -> ../../../04_callpeak/div_peak/WT-E5-0h-R2_peaks.narrowPeak
+│       ├── WT-G3-R1_peaks.narrowPeak -> ../../../04_callpeak/div_peak/WT-G3-R1_peaks.narrowPeak
+│       └── WT-G3-R2_peaks.narrowPeak -> ../../../04_callpeak/div_peak/WT-G3-R2_peaks.narrowPeak
+├── result
+│   ├── E50h_GM3D_DiffPeakAnno.csv
+│   └── E50h_GM3D_DiffPeakGO.csv
+└── script
+    ├── DA_DiffBind.R
+    ├── DotplotSelect.R
+    ├── Enrichment_clusterProfiler.R
+    └── Volcanoplot.R
+```
+
+
+
+
+
+## MotifAnalysis
+
+For the motifAnalysis, we will use the HOMER, which is not the R package. So we need to do it in the linux.
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result
+$ mkdir 08_motif
+
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/07_Diff/result
+$ sed 1d E50h_GM3D_DiffPeakAnno.csv | awk -F "," 'BEGIN {OFS = "\t"} $9 > 1 && $11 < 0.05 {print $12,$1,$2,$3,"."}' | sed 's/"//g' | sort -k2,2 -k3,3 > ../../08_motif/E50h_GM3D_DiffPeakAnno_Up.bed
+
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/07_Diff/result
+$ sed 1d E50h_GM3D_DiffPeakAnno.csv | awk -F "," 'BEGIN {OFS = "\t"} $9 < -1 && $11 < 0.05 {print $12,$1,$2,$3,"."}' | sed 's/"//g' | sort -k2,2 -k3,3 > ../../08_motif/E50h_GM3D_DiffPeakAnno_Down.bed
+
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/08_motif
+$ wc -l *
+  2001 E50h_GM3D_DiffPeakAnno_Down.bed
+  3668 E50h_GM3D_DiffPeakAnno_Up.bed
+  5669 total
+```
+
+
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/08_motif
+$ cat FindMotif.sh 
+#!/bin/bash
+module load HOMER/4.10
+
+ls *.bed | while read id;
+do
+    output_file=$(basename ${id} .bed)
+    echo ${output_file}
+
+    mkdir -p ${output_file}
+
+    findMotifsGenome.pl ${id} ~/reference/genome/TAIR10/Athaliana.fa ${output_file} -p 10 -mset plants &
+done
+
+```
+
+
+
+```bash
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/08_motif
+$ nohup bash FindMotif.sh 2>&1 > HOMER.log
+nohup: ignoring input and redirecting stderr to stdout
+
+sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/08_motif
+$ ll
+total 244K
+drwxr-xr-x. 2 sgd bioinfo 4.0K Oct 28 14:19 E50h_GM3D_DiffPeakAnno_Down
+-rw-r--r--. 1 sgd bioinfo  78K Oct 28 14:16 E50h_GM3D_DiffPeakAnno_Down.bed
+drwxr-xr-x. 2 sgd bioinfo 4.0K Oct 28 14:19 E50h_GM3D_DiffPeakAnno_Up
+-rw-r--r--. 1 sgd bioinfo 143K Oct 28 14:16 E50h_GM3D_DiffPeakAnno_Up.bed
+-rw-r--r--. 1 sgd bioinfo  268 Oct 28 14:17 FindMotif.sh
+-rw-r--r--. 1 sgd bioinfo 5.0K Oct 28 14:19 HOMER.log
+
+```
 
