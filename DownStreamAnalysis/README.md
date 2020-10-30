@@ -752,6 +752,8 @@ $ tree
 
 ## MotifAnalysis
 
+### Description
+
 For the motifAnalysis, we will use the HOMER, which is not the R package. So we need to do it in the linux.
 
 ```bash
@@ -810,3 +812,27 @@ drwxr-xr-x. 2 sgd bioinfo 4.0K Oct 28 14:19 E50h_GM3D_DiffPeakAnno_Up
 
 ```
 
+We can see the motif in diffpeak in correspondent directory. The following is an example of `E50h_GM3D_DiffPeakAnno_Up`.
+
+![KnownMotif](Picture/HOMER_KnowMotif.jpg)
+
+![HomerMotif](Picture/HOMER_HOMERMotif.jpg)
+
+
+
+### Note
+
+- Because of random background selecting in `findMotifsGenome.pl` , maybe your result will be different from above.
+
+  > Since HOMER is a differential motif discovery algorithm, it must use background sequence regions as a control.  By default, HOMER selects enough random background regions such that the total number of regions is 50000 or 2x the total number of peaks, which ever is larger (to change use "-N <#>"). 
+
+- Actually, you can also try to treat up(down) as background bed, then compare down(up) with background, which may also produce some interesting result :).
+
+  ```bash
+  sgd@localhost ~/project/202010/2020STARProtocols_ATAC_Seq_202010/result/08_motif
+  $ findMotifsGenome.pl E50h_GM3D_DiffPeakAnno_Up.bed ~/reference/genome/TAIR10/Athaliana.fa Up_VS_down -bg E50h_GM3D_DiffPeakAnno_Down.bed -p 10 -mset plants
+  ```
+
+  
+
+  
