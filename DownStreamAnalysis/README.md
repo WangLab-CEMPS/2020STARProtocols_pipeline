@@ -383,9 +383,15 @@ peakAnno_tb %>%
 
 - you can see the DA analysis script in [DA_DiffBind.R](Script/DA_DiffBind.R)
 
-- you can see the final DiffPeakAnno in [DiffPeakAnno](File/E50h_GM3D_DiffPeakAnno.csv)
+- you can see the final DiffPeakAnno result in [DiffPeakAnno](File/E50h_GM3D_DiffPeakAnno.csv)
 
-- DiffBind in Windows R may not work very well beacasue of Rsamtools
+- I recommend to use DiffBind in Linux R, at least for version before DiffBind 2.14.0(Bioconductor 3.10). DiffBind in Windows R may not work very well beacasue of Rsamtools bug in Windows.
+
+- DiffBind is not the only way to do DA analysis, If you want to try more ways. You can see the following paper
+
+  > Yan, F., Powell, D.R., Curtis, D.J., and Wong, N.C. (2020). From reads to insight: a hitchhiker’s guide to ATAC-seq data analysis. Genome Biol *21*, 22.
+
+  > Reske, J.J., Wilson, M.R., and Chandler, R.L. (2020). ATAC-seq normalization method can significantly affect differential accessibility analysis and interpretation. Epigenetics & Chromatin *13*, 22.
 
 - My session
 
@@ -519,11 +525,11 @@ dev.off()
 
 ### Note
 
-- you can see the EnrichmentAnalysis script in [Enrichment_clusterProfiler](Script/Enrichment_clusterProfiler.R)
+- you can see the EnrichmentAnalysis script in [Enrichment_clusterProfiler.R](Script/Enrichment_clusterProfiler.R)
 
-- you can see the final DiffPeakAnno in [DiffPeakGO](File/E50h_GM3D_DiffPeakGO.csv)
+- you can see the final DiffPeakGO result in [DiffPeakGO](File/E50h_GM3D_DiffPeakGO.csv)
 
-- PeakAnno is a complex thing
+- `PeakAnno` is a complex task, which means if you set different parameters in one tool or different tools, the peak relevant gene will be different. And then, the final GO result will be different. There are many annotated ways you can try in `ChIPseeker`, just like `genomicAnnotationPriority`, `addFlankGeneInfo` . Apart from the `ChIPseeker`, [ChIPpeakAnno](https://www.bioconductor.org/packages/release/bioc/html/ChIPpeakAnno.html) and [UROPA](https://github.com/loosolab/UROPA) may be a another option you can try.
 
 - Myseesion
 
@@ -675,7 +681,9 @@ dev.off()
 
 ### Note
 
-- you can see the script in the [DotplotSelect](Script/DotplotSelect.R) and [Volcanoplot](Script/Volcanoplot.R)
+- you can see the script in the [DotplotSelect.R](Script/DotplotSelect.R) and [Volcanoplot.R](Script/Volcanoplot.R)
+
+- Sometime, you may be want to open the volcano-plot in adobe illustrator, but it is very slow and memory-consuming. It is because there are too many point(about 3w) in the pdf you plot. In this case, you can try [scattermore](https://github.com/exaexa/scattermore) or [ggrastr](https://github.com/VPetukhov/ggrastr). All two package can rasterize your `geom_point`.
 
 - My session
 
