@@ -738,8 +738,21 @@ plotCorrelation -in multibw_results.npz \
 
 ### Note
 
-- You can choose different binSize and normalized ways
+- You can choose different binSize and normalized ways. **But you should maintain the same binSize and normalized way in one project so you can compare with each other**.
 
+- **Please pay attention to that the bw produced by `bamCoverage` and plot produced by `computeMatrix` and `plotProfile` should not be compared between different length library like PE30 and PE150. ** Otherwise, you will find PE150 library score is much larger than PE30 even actually two library is all good. In order to compare two different length library, you can try to add `--extendReads, -e` in bamCoverage.
+
+  ```bash
+  bamCoverage -b ${prefix}.rm_organelle.bam \
+  --binSize 10 \
+  -o ${prefix}.bw --normalizeUsing BPM \
+  --extendReads
+  ```
+
+- **Actually, you still can compare two different length library without adding `--extendReads`.** You can compare the TSS height with flanking region height. The height of PE150 TSS may be 3 while flanking region may be 1. And for same PE 30 library, TSS may be 1.2 while flanking may be 0.4.
+
+  ![ReferencePoint_height](Picture/Normalize_and_QC_deeptools_Profile_ReferencePoint_height.jpg)
+  
 - During the `deeptools computeMatrix`,  you will need a file named `Araport11_whole_gene_for_deeptools.bed`. For this file, you can make it by yourself using following command or just use [my file](File/Araport11_whole_gene_for_deeptools.bed)
 
   ```bash
