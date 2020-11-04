@@ -740,7 +740,7 @@ plotCorrelation -in multibw_results.npz \
 
 - You can choose different binSize and normalized ways. **But you should maintain the same binSize and normalized way in one project so you can compare with each other**.
 
-- **Please pay attention to that the bw produced by `bamCoverage` and plot produced by `computeMatrix` and `plotProfile` should not be compared between different length library like PE30 and PE150. ** Otherwise, you will find PE150 library score is much larger than PE30 even actually two library is all good. In order to compare two different length library, you can try to add `--extendReads, -e` in bamCoverage.
+- **Please pay attention to that the bw produced by `bamCoverage` and plot produced by `computeMatrix` and `plotProfile` should not be compared between different length library like PE30 and PE150.** Otherwise, you will find PE150 library score is much larger than PE30 even actually two library is all good. In order to compare two different length library, you can try to add `--extendReads, -e` in bamCoverage.
 
   ```bash
   bamCoverage -b ${prefix}.rm_organelle.bam \
@@ -756,7 +756,7 @@ plotCorrelation -in multibw_results.npz \
 - During the `deeptools computeMatrix`,  you will need a file named `Araport11_whole_gene_for_deeptools.bed`. For this file, you can make it by yourself using following command or just use [my file](File/Araport11_whole_gene_for_deeptools.bed)
 
   ```bash
-  awk '$3=="gene"' Araport11_GFF3_genes_transposons.201606.gff | awk 'BEGIN {OFS="\t"} {print $1,$4,$5,$6,$7,$9}' | sed 's/;.*//g' | sed 's/ID=//' > Araport11_whole_gene_for_deeptools.bed
+  awk '$3=="gene"' Araport11_GFF3_genes_transposons.201606.gff | awk 'BEGIN {OFS="\t"} {print $1,$4,$5,$9,$6,$7}' | sed -E 's/ID=(AT.{7});.*\t\./\1\t\./' > Araport11_whole_gene_for_deeptools.bed
   ```
 
   
